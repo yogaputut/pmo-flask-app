@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2 class="mt-4">Edit Task: {{ task.name }}</h2>
+<form action="{{ url_for('edit_task', task_id=task.id) }}" method="POST" class="mb-4">
+    <div class="form-group">
+        <label for="name">Task Name:</label>
+        <input type="text" id="name" name="name" class="form-control" value="{{ task.name }}" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="status">Status:</label>
+        <select id="status" name="status" class="form-control" required>
+            <option value="planned" {% if task.status == 'planned' %}selected{% endif %}>Planned</option>
+            <option value="progress" {% if task.status == 'progress' %}selected{% endif %}>In Progress</option>
+            <option value="done" {% if task.status == 'done' %}selected{% endif %}>Done</option>
+            <option value="closed" {% if task.status == 'closed' %}selected{% endif %}>Closed</option>
+            <option value="canceled" {% if task.status == 'canceled' %}selected{% endif %}>Canceled</option>
+            <option value="on hold" {% if task.status == 'on hold' %}selected{% endif %}>On Hold</option>
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="progress">Work Progress (%):</label>
+        <input type="number" id="progress" name="progress" class="form-control" value="{{ task.work_progress }}" required readonly>
+    </div>
+    
+    <div class="form-group">
+        <label for="payment_progress">Payment Progress (%):</label>
+        <input type="number" id="payment_progress" name="payment_progress" class="form-control" value="{{ task.payment_progress }}" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="cost">Total Cost (Rp):</label>
+        <input type="number" id="cost" name="cost" class="form-control" value="{{ task.cost }}" required>
+    </div>
+      
+    <div class="form-group">
+        <label for="outgoing_costs">Outgoing Payment (Rp):</label>
+        <input type="number" id="outgoing_costs" name="outgoing_costs" class="form-control" value="{{ task.outgoing_costs }}" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="start_date">Start Date:</label>
+        <input type="date" id="start_date" name="start_date" class="form-control" value="{{ task.start_date.isoformat() }}" required>
+    </div>
+    
+    <div class="form-group">
+        <label for="end_date">End Date:</label>
+        <input type="date" id="end_date" name="end_date" class="form-control" value="{{ task.end_date.isoformat() if task.end_date else '' }}">
+    </div>
+    
+    <div class="form-group">
+        <label for="last_payment_date">Last Payment Date:</label>
+        <input type="date" id="last_payment_date" name="last_payment_date" class="form-control" value="{{ task.last_payment_date.isoformat() if task.last_payment_date else '' }}">
+    </div>
+    
+    <div class="form-group">
+        <label for="subtasks">Subtasks:</label>
+        <table class="table table-bordered">
+            <thead class="thead-dark">
+                <tr>
+                    <th>#</th>
+                    <th>Sub Tasks</th>
+                    <th>Progress</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="subtasks-container">
+                {% for subtask in task.subtasks %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><input type="text" name="subtask_name[]" class="form-control" value="{{ subtask.name }}"></td>
+                    <td><input type="checkbox" name="subtasks" value="{{ subtask.id }}" class="form-check-input subtask-checkbox" {% if subtask.status == 'done' %}checked{% endif %}></td>
+                    <td>
+                        <form action="{{ url_for('delete_subtask', subtask_id=subtask.id) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <button type="button" class="btn btn-secondary mb-3" onclick="addSubtask()">Add Subtask</button>
+
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+</form>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const subtaskCheckboxes = document.querySelectorAll('.subtask-checkbox');
+    const progressInput = document.getElementById('progress');
+
+    subtaskCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateProgress);
+    });
+
+    function updateProgress() {
+        const totalSubtasks = subtaskCheckboxes.length;
+        let completedSubtasks = 0;
+
+        subtaskCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                completedSubtasks++;
+            }
+        });
+
+        const progress = (completedSubtasks / totalSubtasks) * 100;
+        progressInput.value = progress.toFixed(2);
+    }
+
+    updateProgress(); // Initial calculation
+});
+
+function addSubtask() {
+    var container = document.getElementById("subtasks-container");
+    var rowCount = container.rows.length;
+    var row = container.insertRow(rowCount);
+    var cell1 = row.insertCell(0);
+    var cell2 = row.insertCell(1);
+    var cell3 = row.insertCell(2);
+    var cell4 = row.insertCell(3);
+    cell1.innerHTML = rowCount + 1;
+    cell2.innerHTML = '<input type="text" name="subtask_name[]" class="form-control">';
+    cell3.innerHTML = '<input type="checkbox" name="subtask_status[]" class="form-check-input subtask-checkbox">';
+    cell4.innerHTML = '<button type="button" class="btn btn-danger btn-sm" onclick="deleteSubtask(this)">Delete</button>';
+    
+    row.querySelector('.subtask-checkbox').addEventListener('change', function() {
+        const subtaskCheckboxes = document.querySelectorAll('.subtask-checkbox');
+        const progressInput = document.getElementById('progress');
+
+        const totalSubtasks = subtaskCheckboxes.length;
+        let completedSubtasks = 0;
+
+        subtaskCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                completedSubtasks++;
+            }
+        });
+
+        const progress = (completedSubtasks / totalSubtasks) * 100;
+        progressInput.value = progress.toFixed(2);
+    });
+}
+
+function deleteSubtask(button) {
+    var row = button.parentNode.parentNode;
+    row.parentNode.removeChild(row);
+    updateProgress(); // Recalculate progress after removing subtask
+}
+</script>
+{% endblock %}

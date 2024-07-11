@@ -1,0 +1,11 @@
+{
+    "name": "pmo-flask-app",
+    "version": "1.0.0",
+    "description": "A Flask app for project management",
+    "main": "run.py",
+    "scripts": {
+      "start": "sh start.sh"
+    },
+    "dependencies": {}
+  }
+  
